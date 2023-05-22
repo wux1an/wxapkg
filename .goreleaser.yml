@@ -1,0 +1,51 @@
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - main: .
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - windows
+    goarch:
+      - amd64
+
+    ignore:
+      - goos: windows
+        goarch: 'arm64'
+
+    binary: 'wxapkg'
+
+    flags:
+      - '-trimpath'
+    ldflags:
+      - '-s -w'
+      - '-X main.version={{ .Version }}'
+      - '-X main.commit={{ .ShortCommit }}'
+    hooks:
+      post: "upx --lzma {{ .Path }}"
+
+changelog:
+  filters:
+    exclude:
+      - '^doc:'
+      - typo
+      - (?i)foo
+      - '^ref'
+      - '^style'
+  groups:
+    - title: Features
+      regexp: "^.*feat[(\\w)]*:+.*$"
+      order: 0
+    - title: 'Bug fixes'
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 1
+    - title: Others
+      order: 999
+
+archives:
+  - format: binary
+
+checksum:
+  algorithm: md5
