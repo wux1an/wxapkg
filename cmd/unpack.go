@@ -17,16 +17,19 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sync"
 	"wxapkg/util"
 )
 
 var logger = color.New()
+
 var unpackCmd = &cobra.Command{
 	Use:   "unpack",
 	Short: "Decrypt wechat mini program",
 	Run: func(cmd *cobra.Command, args []string) {
 		root, _ := cmd.Flags().GetString("root")
 		output, _ := cmd.Flags().GetString("output")
+		thread, _ := cmd.Flags().GetInt("thread")
 
 		wxid, err := parseWxid(root)
 		util.Fatal(err)
@@ -39,7 +42,7 @@ var unpackCmd = &cobra.Command{
 		var allFileCount = 0
 		for _, file := range files {
 			var decryptedData = decryptFile(wxid, file)
-			fileCount, err := unpack(decryptedData, output)
+			fileCount, err := unpack(decryptedData, output, thread)
 			util.Fatal(err)
 			allFileCount += fileCount
 
@@ -61,7 +64,7 @@ type wxapkgFile struct {
 	size    uint32
 }
 
-func unpack(decryptedData []byte, unpackRoot string) (int, error) {
+func unpack(decryptedData []byte, unpackRoot string, thread int) (int, error) {
 	var f = bytes.NewReader(decryptedData)
 
 	// Read header
@@ -103,33 +106,57 @@ func unpack(decryptedData []byte, unpackRoot string) (int, error) {
 	}
 
 	// Save files
-	for i, d := range fileList {
-		d.name = []byte(filepath.Join(unpackRoot, string(d.name)))
-		outputFilePath := string(d.name)
-		dir := filepath.Dir(outputFilePath)
+	var chFiles = make(chan *wxapkgFile)
+	var wg = sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 
-		err := os.MkdirAll(dir, os.ModePerm)
-		if err != nil {
-			return 0, err
+		for _, d := range fileList {
+			chFiles <- d
 		}
+		close(chFiles)
+	}()
 
-		_, err = f.Seek(int64(d.offset), io.SeekStart)
-		buffer := &bytes.Buffer{}
-		_, err = io.CopyN(buffer, f, int64(d.size))
+	wg.Add(thread)
+	var locker = sync.Mutex{}
+	var count = 0
+	for i := 0; i < thread; i++ {
+		go func() {
+			defer wg.Done()
 
-		beautify := fileBeautify(outputFilePath, buffer.Bytes())
-		err = os.WriteFile(outputFilePath, beautify, 0600)
-		if err != nil {
-			return 0, err
-		}
+			for d := range chFiles {
+				d.name = []byte(filepath.Join(unpackRoot, string(d.name)))
+				outputFilePath := string(d.name)
+				dir := filepath.Dir(outputFilePath)
 
-		//color.Green("(%d/%d) saved '%s'", i+1, fileCount, outputFilePath)
-		logger.Printf(color.GreenString("\runpack %d/%d", i+1, fileCount))
+				err := os.MkdirAll(dir, os.ModePerm)
+				util.Fatal(err)
+
+				_, err = f.Seek(int64(d.offset), io.SeekStart)
+				buffer := &bytes.Buffer{}
+				_, err = io.CopyN(buffer, f, int64(d.size))
+
+				beautify := fileBeautify(outputFilePath, buffer.Bytes())
+				err = os.WriteFile(outputFilePath, beautify, 0600)
+				util.Fatal(err)
+
+				//color.Green("(%d/%d) saved '%s'", i+1, fileCount, outputFilePath)
+				locker.Lock()
+				count++
+				logger.Printf(color.GreenString("\runpack %d/%d", count, fileCount))
+				locker.Unlock()
+			}
+		}()
 	}
+
+	wg.Wait()
+
 	return int(fileCount), nil
 }
 
 var exts = make(map[string]int)
+var extsLocker = sync.Mutex{}
 
 func fileBeautify(name string, data []byte) (result []byte) {
 	defer func() {
@@ -140,7 +167,11 @@ func fileBeautify(name string, data []byte) (result []byte) {
 
 	result = data
 	var ext = filepath.Ext(name)
+
+	extsLocker.Lock()
 	exts[ext] = exts[ext] + 1
+	extsLocker.Unlock()
+
 	switch ext {
 	case ".json":
 		result = pretty.Pretty(data)
@@ -209,5 +240,6 @@ func init() {
 
 	unpackCmd.Flags().StringP("root", "r", "", "the mini progress path you want to decrypt")
 	unpackCmd.Flags().StringP("output", "o", "unpack", "the output path to save result")
+	unpackCmd.Flags().IntP("thread", "n", 30, "the thread number")
 	_ = unpackCmd.MarkFlagRequired("root")
 }
