@@ -22,10 +22,11 @@ import (
 )
 
 var logger = color.New()
-
+var programName = filepath.Base(os.Args[0])
 var unpackCmd = &cobra.Command{
-	Use:   "unpack",
-	Short: "Decrypt wechat mini program",
+	Use:     "unpack",
+	Short:   "Decrypt wechat mini program",
+	Example: "  " + programName + "unpack -o unpack -r \"%USERPROFILE%\\Documents\\WeChat Files\\Applet\\wx00000000000000\"",
 	Run: func(cmd *cobra.Command, args []string) {
 		root, _ := cmd.Flags().GetString("root")
 		output, _ := cmd.Flags().GetString("output")
@@ -34,23 +35,28 @@ var unpackCmd = &cobra.Command{
 		wxid, err := parseWxid(root)
 		util.Fatal(err)
 
-		files, err := scanFiles(root)
+		dirs, err := os.ReadDir(root)
 		util.Fatal(err)
 
-		os.MkdirAll(root, 0600)
-
 		var allFileCount = 0
-		for _, file := range files {
-			var decryptedData = decryptFile(wxid, file)
-			fileCount, err := unpack(decryptedData, output, thread)
+		for _, subDir := range dirs {
+			subOutput := filepath.Join(output, subDir.Name())
+
+			files, err := scanFiles(filepath.Join(root, subDir.Name()))
 			util.Fatal(err)
-			allFileCount += fileCount
 
-			logger.Println(color.CyanString("\runpacked %5d files from '%s'", fileCount, file))
+			for _, file := range files {
+				var decryptedData = decryptFile(wxid, file)
+				fileCount, err := unpack(decryptedData, subOutput, thread)
+				util.Fatal(err)
+				allFileCount += fileCount
+
+				logger.Println(color.YellowString("\r[+] unpacked %5d files from '%s'", fileCount, file))
+			}
 		}
-		logger.Println(color.CyanString("all %d files saved to '%s'", allFileCount, output))
 
-		logger.Println(color.CyanString("statistics:"))
+		logger.Println(color.CyanString("[+] all %d files saved to '%s'", allFileCount, output))
+		logger.Println(color.CyanString("[+] statistics:"))
 		for k, v := range exts {
 			logger.Println(color.CyanString("  - %5d %-5s files", v, k))
 		}
@@ -238,7 +244,10 @@ func decryptFile(wxid, wxapkgPath string) []byte {
 func init() {
 	rootCmd.AddCommand(unpackCmd)
 
-	unpackCmd.Flags().StringP("root", "r", "", "the mini progress path you want to decrypt")
+	var homeDir, _ = os.UserHomeDir()
+	var defaultRoot = filepath.Join(homeDir, "Documents/WeChat Files/Applet", "wx00000000000000")
+
+	unpackCmd.Flags().StringP("root", "r", "", "the mini progress path you want to decrypt, see: "+defaultRoot)
 	unpackCmd.Flags().StringP("output", "o", "unpack", "the output path to save result")
 	unpackCmd.Flags().IntP("thread", "n", 30, "the thread number")
 	_ = unpackCmd.MarkFlagRequired("root")
