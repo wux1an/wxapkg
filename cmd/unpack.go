@@ -95,7 +95,7 @@ func unpack(decryptedData []byte, unpackRoot string, thread int) (int, error) {
 	_ = binary.Read(f, binary.BigEndian, &fileCount)
 
 	// Read index
-	var fileList []*wxapkgFile
+	var fileList = make([]*wxapkgFile, fileCount)
 	for i := uint32(0); i < fileCount; i++ {
 		data := &wxapkgFile{}
 		_ = binary.Read(f, binary.BigEndian, &data.nameLen)
@@ -108,7 +108,8 @@ func unpack(decryptedData []byte, unpackRoot string, thread int) (int, error) {
 		_, _ = io.ReadAtLeast(f, data.name, int(data.nameLen))
 		_ = binary.Read(f, binary.BigEndian, &data.offset)
 		_ = binary.Read(f, binary.BigEndian, &data.size)
-		fileList = append(fileList, data)
+
+		fileList[i] = data
 	}
 
 	// Save files
@@ -139,11 +140,9 @@ func unpack(decryptedData []byte, unpackRoot string, thread int) (int, error) {
 				err := os.MkdirAll(dir, os.ModePerm)
 				util.Fatal(err)
 
-				_, err = f.Seek(int64(d.offset), io.SeekStart)
-				buffer := &bytes.Buffer{}
-				_, err = io.CopyN(buffer, f, int64(d.size))
+				data := decryptedData[d.offset : d.offset+d.size]
 
-				beautify := fileBeautify(outputFilePath, buffer.Bytes())
+				beautify := fileBeautify(outputFilePath, data)
 				err = os.WriteFile(outputFilePath, beautify, 0600)
 				util.Fatal(err)
 
