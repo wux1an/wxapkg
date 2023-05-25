@@ -4,15 +4,15 @@
 
 - scan mini program
 
-    ```ruby
-    // wxapkg.exe scan --help
+    ```bash
+    # wxapkg.exe scan --help
     wxapkg.exe scan
     ```
 
 - unpack mini program
 
-    ```ruby
-    // wxapkg.exe unpack --help     
+    ```bash
+    # wxapkg.exe unpack --help     
     wxapkg.exe unpack -o out-dir -r "%USERPROFILE%\Documents\WeChat Files\Applet\wx00000000000000"
     ```
 
