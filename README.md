@@ -18,7 +18,7 @@
 
 **Todo:**
 
-- [ ] scan more information
+- [x] scan more information (need networking）
 - [x] json beautify
 - [ ] javascript beautify
 - [ ] html beautify

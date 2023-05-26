@@ -17,11 +17,11 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"sync"
 	"wxapkg/util"
 )
 
-var logger = color.New()
 var programName = filepath.Base(os.Args[0])
 var unpackCmd = &cobra.Command{
 	Use:     "unpack",
@@ -38,6 +38,8 @@ var unpackCmd = &cobra.Command{
 		dirs, err := os.ReadDir(root)
 		util.Fatal(err)
 
+		color.Cyan("[+] unpack root '%s' with %d threads\n", root, thread)
+
 		var allFileCount = 0
 		for _, subDir := range dirs {
 			subOutput := filepath.Join(output, subDir.Name())
@@ -51,14 +53,29 @@ var unpackCmd = &cobra.Command{
 				util.Fatal(err)
 				allFileCount += fileCount
 
-				logger.Println(color.YellowString("\r[+] unpacked %5d files from '%s'", fileCount, file))
+				rel, _ := filepath.Rel(filepath.Dir(root), file)
+				color.Yellow("\r[+] unpacked %5d files from '%s'", fileCount, rel)
 			}
 		}
 
-		logger.Println(color.CyanString("[+] all %d files saved to '%s'", allFileCount, output))
-		logger.Println(color.CyanString("[+] statistics:"))
+		color.Cyan("[+] all %d files saved to '%s'\n", allFileCount, output)
+		if len(args) == 2 && "detailFilePath" == args[0] {
+			color.Cyan("[+] mini program detail info saved to '%s'\n", args[1])
+		}
+
+		color.Cyan("[+] extension statistics:\n")
+
+		var keys [][]interface{}
 		for k, v := range exts {
-			logger.Println(color.CyanString("  - %5d %-5s files", v, k))
+			keys = append(keys, []interface{}{k, v})
+		}
+
+		sort.Slice(keys, func(i, j int) bool {
+			return keys[i][1].(int) > keys[j][1].(int)
+		})
+
+		for _, kk := range keys {
+			color.Cyan("  - %-5s %5d\n", kk[0], kk[1])
 		}
 	},
 }
@@ -128,6 +145,7 @@ func unpack(decryptedData []byte, unpackRoot string, thread int) (int, error) {
 	wg.Add(thread)
 	var locker = sync.Mutex{}
 	var count = 0
+	var colorPrint = color.New()
 	for i := 0; i < thread; i++ {
 		go func() {
 			defer wg.Done()
@@ -146,10 +164,9 @@ func unpack(decryptedData []byte, unpackRoot string, thread int) (int, error) {
 				err = os.WriteFile(outputFilePath, beautify, 0600)
 				util.Fatal(err)
 
-				//color.Green("(%d/%d) saved '%s'", i+1, fileCount, outputFilePath)
 				locker.Lock()
 				count++
-				logger.Printf(color.GreenString("\runpack %d/%d", count, fileCount))
+				_, _ = colorPrint.Print(color.GreenString("\runpack %d/%d", count, fileCount))
 				locker.Unlock()
 			}
 		}()
@@ -192,7 +209,7 @@ func fileBeautify(name string, data []byte) (result []byte) {
 func parseWxid(root string) (string, error) {
 	var regAppId = regexp.MustCompile(`(wx[0-9a-f]{16})`)
 	if !regAppId.MatchString(filepath.Base(root)) {
-		return "", errors.New("the path is not a mimi program path")
+		return "", errors.New("the path is not a mini program path")
 	}
 
 	return regAppId.FindStringSubmatch(filepath.Base(root))[1], nil
