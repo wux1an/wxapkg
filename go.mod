@@ -1,4 +1,4 @@
-module wxapkg
+module github.com/wux1an/wxapkg
 
 go 1.19
 

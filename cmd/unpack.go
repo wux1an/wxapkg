@@ -11,6 +11,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/tidwall/pretty"
+	"github.com/wux1an/wxapkg/util"
 	"golang.org/x/crypto/pbkdf2"
 	"io"
 	"log"
@@ -19,7 +20,6 @@ import (
 	"regexp"
 	"sort"
 	"sync"
-	"wxapkg/util"
 )
 
 var programName = filepath.Base(os.Args[0])
@@ -258,7 +258,7 @@ func decryptFile(wxid, wxapkgPath string) []byte {
 }
 
 func init() {
-	rootCmd.AddCommand(unpackCmd)
+	RootCmd.AddCommand(unpackCmd)
 
 	var homeDir, _ = os.UserHomeDir()
 	var defaultRoot = filepath.Join(homeDir, "Documents/WeChat Files/Applet", "wx00000000000000")

@@ -5,10 +5,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+	"github.com/wux1an/wxapkg/util"
 	"os"
 	"path/filepath"
 	"regexp"
-	"wxapkg/util"
 )
 
 var scanCmd = &cobra.Command{
@@ -66,7 +66,7 @@ var scanCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(scanCmd)
+	RootCmd.AddCommand(scanCmd)
 
 	var homeDir, _ = os.UserHomeDir()
 	var defaultRoot = filepath.Join(homeDir, "Documents/WeChat Files/Applet")

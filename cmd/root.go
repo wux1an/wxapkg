@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var rootCmd = &cobra.Command{
+var RootCmd = &cobra.Command{
 	Use:   "wxapkg",
 	Short: "A tool to scan and decrypt wechat mini program",
 	CompletionOptions: cobra.CompletionOptions{
@@ -15,7 +15,7 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() {
-	err := rootCmd.Execute()
+	err := RootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}

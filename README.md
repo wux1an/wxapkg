@@ -1,6 +1,16 @@
 # wxapkg
 
+**Install:**
+
+Download the latest [release](https://github.com/wux1an/wxapkg/releases/latest) or build with `go install` by yourself
+
+```
+go install github.com/wux1an/wxapkg@latest
+```
+
 **Usage:**
+
+![demo](demo.gif)
 
 - scan mini program
 
@@ -26,6 +36,7 @@
 
 **References:**
 
-1. decrypt: https://github.com/BlackTrace/pc_wxapkg_decrypt
-2. unpack: https://gist.github.com/Integ/bcac5c21de5ea35b63b3db2c725f07ad
-3. introduce: https://misakikata.github.io/2021/03/%E5%BE%AE%E4%BF%A1%E5%B0%8F%E7%A8%8B%E5%BA%8F%E8%A7%A3%E5%8C%85/
+- decrypt: https://github.com/BlackTrace/pc_wxapkg_decrypt
+- unpack: [https://gist.github.com/Integ/bcac5c21de5ea3...](https://gist.github.com/Integ/bcac5c21de5ea35b63b3db2c725f07ad)
+- introduce: [https://misakikata.github.io/2021/03/%E5%BE%...](https://misakikata.github.io/2021/03/%E5%BE%AE%E4%BF%A1%E5%B0%8F%E7%A8%8B%E5%BA%8F%E8%A7%A3%E5%8C%85/)
+- terminal ui: https://github.com/charmbracelet/bubbletea

@@ -9,10 +9,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/fatih/color"
+	"github.com/wux1an/wxapkg/util"
 	"regexp"
 	"strconv"
 	"strings"
-	"wxapkg/util"
 )
 
 var baseStyle = lipgloss.NewStyle().
