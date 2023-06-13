@@ -9,12 +9,18 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 )
 
 var scanCmd = &cobra.Command{
-	Use:   "scan",
-	Short: "Scan the wechat mini program",
+	Use:     "scan",
+	Short:   "获取小程序列表,并且指定 文件管理路径 例如: wxapkg.exe scan E:\\微信文件\\WeChat Files\\",
+	Example: "可以添加参数 使用微信-->设置-->文件管理中的路径 \r\n 例如: wxapkg.exe scan E:\\微信文件\\WeChat Files\\",
 	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) != 0 {
+			path := strings.Join(args, " ")
+			cmd.Flags().Set("root", filepath.Join(path, "Applet"))
+		}
 		root, err := cmd.Flags().GetString("root")
 		if err != nil {
 			color.Red("%v", err)
