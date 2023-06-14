@@ -35,7 +35,7 @@ go install github.com/wux1an/wxapkg@latest
 - [x] scan more information (need networking）
 - [x] json beautify
 - [ ] javascript beautify
-- [ ] html beautify
+- [x] html beautify
 - [ ] auto export uri in files
 
 **References:**

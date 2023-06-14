@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/tidwall/pretty"
 	"github.com/wux1an/wxapkg/util"
+	"github.com/yosssi/gohtml"
 	"golang.org/x/crypto/pbkdf2"
 	"io"
 	"log"
@@ -197,10 +198,8 @@ func fileBeautify(name string, data []byte) (result []byte) {
 	switch ext {
 	case ".json":
 		result = pretty.Pretty(data)
-		//case ".js":
-		//	return data
-		//case "html":
-		//	return data
+	case ".html":
+		result = gohtml.FormatBytes(data)
 	}
 
 	return result
