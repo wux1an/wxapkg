@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/ditashi/jsbeautifier-go/jsbeautifier"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/tidwall/pretty"
@@ -198,8 +199,15 @@ func fileBeautify(name string, data []byte) (result []byte) {
 	switch ext {
 	case ".json":
 		result = pretty.Pretty(data)
-	case ".html":
-		result = gohtml.FormatBytes(data)
+	case ".html": // todo beautify js code in html
+		result = gohtml.FormatBytes(bytes.TrimSpace(data)) // remove leading whitespace
+	case ".js":
+		var code = string(bytes.TrimSpace(data)) // remove leading whitespace
+		options := jsbeautifier.DefaultOptions()
+		beautify, err := jsbeautifier.Beautify(&code, options)
+		if err == nil {
+			result = []byte(beautify)
+		}
 	}
 
 	return result
