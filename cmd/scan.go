@@ -12,8 +12,9 @@ import (
 )
 
 var scanCmd = &cobra.Command{
-	Use:   "scan",
-	Short: "Scan the wechat mini program",
+	Use:     "scan",
+	Short:   "Scan the wechat mini program",
+	Example: "  " + programName + " scan -r \"D:\\WeChat Files\\Applet\\wx12345678901234\"",
 	Run: func(cmd *cobra.Command, args []string) {
 		root, err := cmd.Flags().GetString("root")
 		if err != nil {

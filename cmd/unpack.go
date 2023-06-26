@@ -8,12 +8,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/ditashi/jsbeautifier-go/jsbeautifier"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
-	"github.com/tidwall/pretty"
 	"github.com/wux1an/wxapkg/util"
-	"github.com/yosssi/gohtml"
 	"golang.org/x/crypto/pbkdf2"
 	"io"
 	"log"
@@ -28,7 +25,7 @@ var programName = filepath.Base(os.Args[0])
 var unpackCmd = &cobra.Command{
 	Use:     "unpack",
 	Short:   "Decrypt wechat mini program",
-	Example: "  " + programName + "unpack -o unpack -r \"%USERPROFILE%\\Documents\\WeChat Files\\Applet\\wx00000000000000\"",
+	Example: "  " + programName + "unpack -o unpack -r \"D:\\WeChat Files\\Applet\\wx12345678901234\"",
 	Run: func(cmd *cobra.Command, args []string) {
 		root, _ := cmd.Flags().GetString("root")
 		output, _ := cmd.Flags().GetString("output")
@@ -184,6 +181,11 @@ func unpack(decryptedData []byte, unpackRoot string, thread int, beautify bool) 
 
 var exts = make(map[string]int)
 var extsLocker = sync.Mutex{}
+var beautify = map[string]func([]byte) []byte{
+	".json": util.PrettyJson,
+	".html": util.PrettyHtml,
+	".js":   util.PrettyJavaScript,
+}
 
 func fileBeautify(name string, data []byte) (result []byte) {
 	defer func() {
@@ -192,28 +194,18 @@ func fileBeautify(name string, data []byte) (result []byte) {
 		}
 	}()
 
-	result = data
 	var ext = filepath.Ext(name)
 
 	extsLocker.Lock()
 	exts[ext] = exts[ext] + 1
 	extsLocker.Unlock()
 
-	switch ext {
-	case ".json":
-		result = pretty.Pretty(data)
-	case ".html": // todo beautify js code in html
-		result = gohtml.FormatBytes(bytes.TrimSpace(data)) // remove leading whitespace
-	case ".js":
-		var code = string(bytes.TrimSpace(data)) // remove leading whitespace
-		options := jsbeautifier.DefaultOptions()
-		beautify, err := jsbeautifier.Beautify(&code, options)
-		if err == nil {
-			result = []byte(beautify)
-		}
+	b, ok := beautify[ext]
+	if !ok {
+		return data
 	}
 
-	return result
+	return b(data)
 }
 
 func parseWxid(root string) (string, error) {
