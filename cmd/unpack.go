@@ -33,6 +33,7 @@ var unpackCmd = &cobra.Command{
 		root, _ := cmd.Flags().GetString("root")
 		output, _ := cmd.Flags().GetString("output")
 		thread, _ := cmd.Flags().GetInt("thread")
+		disableBeautify, _ := cmd.Flags().GetBool("disable-beautify")
 
 		wxid, err := parseWxid(root)
 		util.Fatal(err)
@@ -51,7 +52,7 @@ var unpackCmd = &cobra.Command{
 
 			for _, file := range files {
 				var decryptedData = decryptFile(wxid, file)
-				fileCount, err := unpack(decryptedData, subOutput, thread)
+				fileCount, err := unpack(decryptedData, subOutput, thread, !disableBeautify)
 				util.Fatal(err)
 				allFileCount += fileCount
 
@@ -89,7 +90,7 @@ type wxapkgFile struct {
 	size    uint32
 }
 
-func unpack(decryptedData []byte, unpackRoot string, thread int) (int, error) {
+func unpack(decryptedData []byte, unpackRoot string, thread int, beautify bool) (int, error) {
 	var f = bytes.NewReader(decryptedData)
 
 	// Read header
@@ -162,8 +163,10 @@ func unpack(decryptedData []byte, unpackRoot string, thread int) (int, error) {
 
 				data := decryptedData[d.offset : d.offset+d.size]
 
-				beautify := fileBeautify(outputFilePath, data)
-				err = os.WriteFile(outputFilePath, beautify, 0600)
+				if beautify {
+					data = fileBeautify(outputFilePath, data)
+				}
+				err = os.WriteFile(outputFilePath, data, 0600)
 				util.Fatal(err)
 
 				locker.Lock()
