@@ -22,5 +22,5 @@ func Execute() {
 }
 
 func init() {
-	RootCmd.Flags().Bool("disable-beautify", false, "disable js,html,json beautify")
+	RootCmd.PersistentFlags().Bool("disable-beautify", false, "disable js,html,json beautify")
 }
