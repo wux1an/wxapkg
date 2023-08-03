@@ -9,7 +9,7 @@
     - [x] 美化 `JSON` 文件
     - [x] 美化 `JavaScript` 文件（会有点慢）
     - [x] 美化 `Html` 文件，包括其中的 `<script>` 标签（会有点慢）
-- [ ] 解析并还原成小程序原始源码文件结构 [#6](https://github.com/wux1an/wxapkg/issues/33)
+- [ ] 解析并还原成小程序原始源码文件结构 [#6](https://github.com/wux1an/wxapkg/issues/6)
 - [ ] 自动导出文件中的敏感 url 和 key 等信息
 
 ## 🎨 用法
