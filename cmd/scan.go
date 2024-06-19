@@ -46,7 +46,7 @@ var scanCmd = &cobra.Command{
 			}
 
 			wxidInfos = append(wxidInfos, info)
-			time.Sleep(1 * time.Second) // WxidQuery 查询接口有频率限制 延时等待
+			time.Sleep(2 * time.Second) // WxidQuery 查询接口有频率限制 延时等待
 		}
 
 		var tui = newScanTui(wxidInfos)
