@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"time"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -45,6 +46,7 @@ var scanCmd = &cobra.Command{
 			}
 
 			wxidInfos = append(wxidInfos, info)
+			time.Sleep(2 * time.Second) // WxidQuery 查询接口有频率限制 延时等待
 		}
 
 		var tui = newScanTui(wxidInfos)
