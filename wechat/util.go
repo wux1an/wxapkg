@@ -4,6 +4,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/sha1"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -85,14 +86,16 @@ func ScanWxapkgItem(path string, scan bool) ([]WxapkgItem, error) {
 	}
 
 	if !stat.IsDir() || !scan {
-		return []WxapkgItem{{
-			UUID:           uuid(),
-			WxId:           "unknown",
-			Location:       path,
-			Size:           getPathSize(path),
-			IsDir:          stat.IsDir(),
-			LastModifyTime: stat.ModTime().Unix(),
-		}}, nil
+		return []WxapkgItem{
+			{
+				UUID:           uuid(),
+				WxId:           "unknown",
+				Location:       path,
+				Size:           getPathSize(path),
+				IsDir:          stat.IsDir(),
+				LastModifyTime: stat.ModTime().Unix(),
+			},
+		}, nil
 	}
 
 	entries, err := os.ReadDir(path)
@@ -110,6 +113,7 @@ func ScanWxapkgItem(path string, scan bool) ([]WxapkgItem, error) {
 				item := WxapkgItem{
 					UUID:       uuid(),
 					WxId:       dirName,
+					Title:      "",
 					Location:   localPath,
 					EncryptKey: dirName,
 					Size:       getPathSize(localPath),
@@ -117,6 +121,11 @@ func ScanWxapkgItem(path string, scan bool) ([]WxapkgItem, error) {
 				}
 				if info, err := os.Stat(localPath); err == nil {
 					item.LastModifyTime = info.ModTime().Unix()
+				}
+
+				item.Title, err = SimpleGetAppConfig(&item)
+				if err != nil {
+					fmt.Printf("获取小程序配置失败，wxid: %s, 错误: %v\n", dirName, err)
 				}
 
 				result = append(result, item)

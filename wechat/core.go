@@ -3,6 +3,7 @@ package wechat
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -36,6 +37,7 @@ type UnpackOptions struct {
 type WxapkgItem struct {
 	UUID            string
 	WxId            string
+	Title           string
 	Location        string
 	EncryptKey      string
 	Size            int64
@@ -106,6 +108,67 @@ func NewUnpacker(item *WxapkgItem, options *UnpackOptions) *Unpacker {
 	}
 }
 
+func SimpleGetAppConfig(item *WxapkgItem) (title string, err error) {
+	u := NewUnpacker(item, &UnpackOptions{
+		EnableDecrypt: true,
+	})
+
+	files := []string{item.Location}
+	if item.IsDir {
+		files, err = ListFilesWithExtension(item.Location, "__APP__.wxapkg")
+		if err != nil {
+			return
+		}
+	}
+
+	var fileData []byte
+	for _, wxapkgFile := range files {
+		fileData, err = os.ReadFile(wxapkgFile)
+		if err != nil {
+			return
+		}
+
+		if !u.isDecryptedWxapkgFile(fileData) {
+			if !u.options.EnableDecrypt {
+				return "", errors.Errorf("小程序文件 '%s' 为加密文件，请在解包配置中启用解密", wxapkgFile)
+			}
+			if u.item.EncryptKey == "" {
+				return "", errors.Errorf("小程序文件 '%s' 为加密文件，未设置解密密钥，秘钥为小程序的 wxid，格式：^wx[0-9a-f]{16}$",
+					wxapkgFile)
+			}
+
+			fileData, err = decryptWxapkgFile(u.item.EncryptKey, fileData)
+			if err != nil {
+				return "", errors.Errorf("解密小程序文件 '%s' 失败, %v", wxapkgFile, err)
+			}
+		}
+
+		files, err := u.analyze(fileData, wxapkgFile)
+		if err != nil {
+			return "", errors.Errorf("解析小程序文件 '%s' 失败, %v", wxapkgFile, err)
+		}
+
+		u.files = append(u.files, files...)
+	}
+
+	for _, file := range u.files {
+		if strings.Contains(file.name, "app-config") {
+			var appConfig AppConfig
+			err = json.Unmarshal((*file.rawFileData)[file.offset:file.offset+file.size], &appConfig)
+			if err != nil {
+				return "", errors.Errorf("解析 app-config.json 失败，%v", err)
+			}
+
+			if appConfig.Global.Window.NavigationBarTitleText != "" {
+				title = appConfig.Global.Window.NavigationBarTitleText
+
+			}
+		}
+	}
+
+	return
+}
+
 func (u *Unpacker) init() error {
 	var err error
 	u.options.OutputDir, err = filepath.Abs(u.options.OutputDir)
@@ -144,7 +207,8 @@ func (u *Unpacker) analyzeAll() error {
 				return errors.Errorf("小程序文件 '%s' 为加密文件，请在解包配置中启用解密", wxapkgFile)
 			}
 			if u.item.EncryptKey == "" {
-				return errors.Errorf("小程序文件 '%s' 为加密文件，未设置解密密钥，秘钥为小程序的 wxid，格式：^wx[0-9a-f]{16}$", wxapkgFile)
+				return errors.Errorf("小程序文件 '%s' 为加密文件，未设置解密密钥，秘钥为小程序的 wxid，格式：^wx[0-9a-f]{16}$",
+					wxapkgFile)
 			}
 
 			fileData, err = decryptWxapkgFile(u.item.EncryptKey, fileData)
@@ -317,7 +381,8 @@ func (u *Unpacker) unpack(thread int, callback func(item *WxapkgItem)) bool {
 				err := os.MkdirAll(dir, os.ModePerm)
 				if err != nil {
 					u.lock(func() {
-						u.item.SetErrorState(fmt.Sprintf("解包小程序文件 %s 时出错，创建目录 %s 失败，%v", *d.rawFilePath, dir, err))
+						u.item.SetErrorState(fmt.Sprintf("解包小程序文件 %s 时出错，创建目录 %s 失败，%v", *d.rawFilePath,
+							dir, err))
 						if !hasError {
 							callback(u.item)
 						}
@@ -340,7 +405,8 @@ func (u *Unpacker) unpack(thread int, callback func(item *WxapkgItem)) bool {
 				err = os.WriteFile(d.savePath, data, 0600)
 				if err != nil {
 					u.lock(func() {
-						u.item.SetErrorState(fmt.Sprintf("解包小程序文件 %s 时出错，写入文件 %s 失败，%v", *d.rawFilePath, d.savePath, err))
+						u.item.SetErrorState(fmt.Sprintf("解包小程序文件 %s 时出错，写入文件 %s 失败，%v", *d.rawFilePath,
+							d.savePath, err))
 						if !hasError {
 							callback(u.item)
 						}
