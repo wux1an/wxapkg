@@ -279,6 +279,12 @@ onBeforeUnmount(() => {
           </template>
         </Column>
 
+        <Column header="小程序名称" field="WxId" style="width: 170px">
+          <template #body="{ data }">
+            <div class="mono" style="font-size:13px; white-space:nowrap">{{ data.Title }}</div>
+          </template>
+        </Column>
+
         <Column header="修改时间" field="LastModifyTime" :sortable="true" style="width: 180px">
           <template #body="{ data }">
             <div style="white-space:nowrap">{{ formatTime(data.LastModifyTime, false) }}</div>
