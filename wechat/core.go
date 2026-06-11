@@ -314,10 +314,21 @@ func (u *Unpacker) unpack(thread int, callback func(item *WxapkgItem)) bool {
 				u.locker.Unlock()
 
 				dir := filepath.Dir(d.savePath)
-				err := os.MkdirAll(dir, os.ModePerm)
+				err := os.MkdirAll(dir, 0755)
 				if err != nil {
 					u.lock(func() {
 						u.item.SetErrorState(fmt.Sprintf("解包小程序文件 %s 时出错，创建目录 %s 失败，%v", *d.rawFilePath, dir, err))
+						if !hasError {
+							callback(u.item)
+						}
+						hasError = true
+					})
+					return
+				}
+
+				if uint64(d.offset)+uint64(d.size) > uint64(len(*d.rawFileData)) {
+					u.lock(func() {
+						u.item.SetErrorState(fmt.Sprintf("解包小程序文件 %s 时出错，文件偏移 %d + 长度 %d 超出数据范围 %d", *d.rawFilePath, d.offset, d.size, len(*d.rawFileData)))
 						if !hasError {
 							callback(u.item)
 						}
