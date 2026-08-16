@@ -58,6 +58,8 @@ export namespace wechat {
 	export class WxapkgItem {
 	    UUID: string;
 	    WxId: string;
+	    AppName: string;
+	    AppNameSource: string;
 	    Location: string;
 	    EncryptKey: string;
 	    Size: number;
@@ -80,6 +82,8 @@ export namespace wechat {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.UUID = source["UUID"];
 	        this.WxId = source["WxId"];
+	        this.AppName = source["AppName"];
+	        this.AppNameSource = source["AppNameSource"];
 	        this.Location = source["Location"];
 	        this.EncryptKey = source["EncryptKey"];
 	        this.Size = source["Size"];

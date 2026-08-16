@@ -40,11 +40,34 @@ const defaultOutputDir = ref('')
 const lastOutputDir = ref('')
 const sessionOutputDir = ref('')
 
+const appNameSourceLabels: Record<string, string> = {
+  'local-metadata': '本地元数据',
+  'package-config': '包内显式配置',
+  'navigation-title': '全局导航标题',
+  'code-candidate': '代码候选（低置信度）',
+}
+
+function appNameSourceLabel(source?: string): string {
+  return source ? (appNameSourceLabels[source] ?? source) : ''
+}
+
+function appNameTooltip(item: WxapkgItem): string {
+  if (!item.AppName) {
+    return '未能从本地元数据或包内配置识别名称'
+  }
+  if (item.AppNameSource === 'code-candidate') {
+    return '来源：代码候选（低置信度），可能是业务变量或厂商标识'
+  }
+  const source = appNameSourceLabel(item.AppNameSource)
+  return source ? '来源：' + source : '来源：包内元数据'
+}
+
 const filteredItems = computed(() => {
   if (!search.value.trim()) return wxapkgItems.value
   const queryStr = search.value.toLowerCase().trim()
   return wxapkgItems.value.filter(item =>
     item.WxId.toLowerCase().includes(queryStr) ||
+    (item.AppName ?? '').toLowerCase().includes(queryStr) ||
     item.Location.toLowerCase().includes(queryStr)
   )
 })
@@ -262,11 +285,28 @@ onBeforeUnmount(() => {
         >
           <colgroup>
             <col style="width: 170px">
+            <col style="width: 190px">
             <col style="width: 180px">
             <col style="width: 100px">
             <col style="min-width: 200px">
             <col style="width: 72px">
           </colgroup>
+        <Column header="识别名称" field="AppName" style="width: 190px">
+          <template #body="{ data }">
+            <div class="app-name-cell-wrapper">
+              <div
+                class="app-name-cell"
+                :class="{ 'app-name-unknown': !data.AppName }"
+                v-tooltip.bottom="appNameTooltip(data)"
+              >
+                {{ data.AppName || '未识别名称' }}
+              </div>
+              <small v-if="data.AppName && data.AppNameSource" class="app-name-source">
+                {{ appNameSourceLabel(data.AppNameSource) }}
+              </small>
+            </div>
+          </template>
+        </Column>
         <template #empty>
           <div class="table-empty">
             {{ search ? `没有搜索到与 "${search}" 相关的小程序` : '没有小程序，请扫描或添加' }}
@@ -484,6 +524,35 @@ onBeforeUnmount(() => {
 
 .status-dot i {
   font-size: 15px;
+}
+
+.app-name-cell {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.app-name-cell-wrapper {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.app-name-source {
+  overflow: hidden;
+  color: var(--color-text-tertiary);
+  font-size: 10px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-name-unknown {
+  color: var(--color-text-tertiary);
+  font-weight: 400;
 }
 
 .path-cell {

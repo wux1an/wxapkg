@@ -40,3 +40,5 @@ require (
 	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
 )
+
+replace github.com/ditashi/jsbeautifier-go => ./third_party/jsbeautifier-go

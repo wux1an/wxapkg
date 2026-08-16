@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	uuidlib "github.com/google/uuid"
+	"github.com/pkg/errors"
 	"golang.org/x/crypto/pbkdf2"
 )
 
@@ -57,19 +58,27 @@ func decryptWxapkgFile(wxid string, dataByte []byte) ([]byte, error) {
 		salt = "saltiest"
 		iv   = "the iv: 16 bytes"
 	)
+	const encryptedHeaderSize = 6
+	const encryptedBlockSize = 1024
+	if len(dataByte) < encryptedHeaderSize+encryptedBlockSize {
+		return nil, errors.Errorf("加密 wxapkg 文件长度 %d 小于最小长度 %d", len(dataByte), encryptedHeaderSize+encryptedBlockSize)
+	}
 
 	dk := pbkdf2.Key([]byte(wxid), []byte(salt), 1000, 32, sha1.New)
-	block, _ := aes.NewCipher(dk)
+	block, err := aes.NewCipher(dk)
+	if err != nil {
+		return nil, errors.Errorf("创建 wxapkg 解密器失败: %v", err)
+	}
 	blockMode := cipher.NewCBCDecrypter(block, []byte(iv))
 	originData := make([]byte, 1024)
-	blockMode.CryptBlocks(originData, dataByte[6:1024+6])
+	blockMode.CryptBlocks(originData, dataByte[encryptedHeaderSize:encryptedHeaderSize+encryptedBlockSize])
 
-	afData := make([]byte, len(dataByte)-1024-6) // remove first 6 + 1024 byte
+	afData := make([]byte, len(dataByte)-encryptedBlockSize-encryptedHeaderSize) // remove first 6 + 1024 byte
 	var xorKey = byte(0x66)
 	if len(wxid) >= 2 {
 		xorKey = wxid[len(wxid)-2]
 	}
-	for i, b := range dataByte[1024+6:] { // from 6 + 1024 byte
+	for i, b := range dataByte[encryptedHeaderSize+encryptedBlockSize:] { // from 6 + 1024 byte
 		afData[i] = b ^ xorKey
 	}
 
@@ -85,10 +94,19 @@ func ScanWxapkgItem(path string, scan bool) ([]WxapkgItem, error) {
 	}
 
 	if !stat.IsDir() || !scan {
+		wxid := wxIDFromPath(path)
+		itemWxID := wxid
+		if itemWxID == "" {
+			itemWxID = "unknown"
+		}
+		appName := appNameForPathResult(path, wxid)
 		return []WxapkgItem{{
 			UUID:           uuid(),
-			WxId:           "unknown",
+			WxId:           itemWxID,
 			Location:       path,
+			AppName:        appName.name,
+			AppNameSource:  appName.source,
+			EncryptKey:     wxid,
 			Size:           getPathSize(path),
 			IsDir:          stat.IsDir(),
 			LastModifyTime: stat.ModTime().Unix(),
@@ -106,14 +124,17 @@ func ScanWxapkgItem(path string, scan bool) ([]WxapkgItem, error) {
 			dirName := entry.Name()
 			if reWxId.MatchString(dirName) {
 				localPath := filepath.Join(path, dirName)
+				appName := appNameForPathResult(localPath, dirName)
 
 				item := WxapkgItem{
-					UUID:       uuid(),
-					WxId:       dirName,
-					Location:   localPath,
-					EncryptKey: dirName,
-					Size:       getPathSize(localPath),
-					IsDir:      true,
+					UUID:          uuid(),
+					WxId:          dirName,
+					Location:      localPath,
+					EncryptKey:    dirName,
+					AppName:       appName.name,
+					AppNameSource: appName.source,
+					Size:          getPathSize(localPath),
+					IsDir:         true,
 				}
 				if info, err := os.Stat(localPath); err == nil {
 					item.LastModifyTime = info.ModTime().Unix()
